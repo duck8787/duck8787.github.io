@@ -1,279 +1,343 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【雪山奇遇記 2.0】AI 覺醒還是系統 Bug？</title>
-    <style>
-        :root {
-            --primary-color: #ff0055; /* 霓虹紅 */
-            --secondary-color: #00f2fe; /* 霓虹藍 */
-            --bg-color: #0a0e17; /* 深沉背景 */
-            --card-bg: #161c2a;
-            --text-color: #e0e6ed;
-            --border-color: #2c3e50;
-        }
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Compass, 
+  Code, 
+  Mic, 
+  BookOpen, 
+  Play, 
+  CheckCircle, 
+  MessageSquare, 
+  Zap, 
+  BarChart3, 
+  Award,
+  ChevronRight,
+  BrainCircuit,
+  Terminal,
+  Search,
+  Layout
+} from 'lucide-react';
 
-        body {
-            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
-            background-color: var(--bg-color);
-            background-image: 
-                linear-gradient(rgba(0, 242, 254, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 242, 254, 0.05) 1px, transparent 1px);
-            background-size: 20px 20px;
-            color: var(--text-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
+// --- 模擬數據 ---
+const ROADMAP_DATA = [
+  { id: 1, title: '啟蒙期: AI 導論', status: 'completed', type: 'theory', icon: <BookOpen className="w-5 h-5" /> },
+  { id: 2, title: '築基期: Python 基礎', status: 'current', type: 'coding', icon: <Code className="w-5 h-5" /> },
+  { id: 3, title: '築基期: 數據處理 (Pandas)', status: 'locked', type: 'coding', icon: <BarChart3 className="w-5 h-5" /> },
+  { id: 4, title: '進階期: 深度學習原理', status: 'locked', type: 'theory', icon: <BrainCircuit className="w-5 h-5" /> },
+  { id: 5, title: '大師期: 實踐 NLP 專案', status: 'locked', type: 'project', icon: <Award className="w-5 h-5" /> },
+];
 
-        #quiz-container {
-            background: var(--card-bg);
-            max-width: 650px;
-            width: 100%;
-            padding: 40px;
-            border-radius: 4px; /* 賽博風通常比較方正 */
-            box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
-            border: 1px solid var(--secondary-color);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
+const INITIAL_CODE = `import torch
+import torch.nn as nn
 
-        /* 裝飾用的掃描線效果 */
-        #quiz-container::after {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 2px;
-            background: var(--primary-color);
-            opacity: 0.5;
-            animation: scan 4s linear infinite;
-        }
+# 定義一個簡單的神經網絡
+class SimpleNet(nn.Module):
+    def __init__(self):
+        super(SimpleNet, self).__init__()
+        self.fc1 = nn.Linear(784, 128)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(128, 10)
 
-        @keyframes scan {
-            0% { top: -100%; }
-            100% { top: 100%; }
-        }
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return x
 
-        h1 { 
-            color: var(--text-color); 
-            text-shadow: 0 0 10px var(--primary-color);
-            margin-bottom: 10px;
-        }
-        
-        .subtitle {
-            color: var(--secondary-color);
-            font-size: 0.9rem;
-            margin-bottom: 30px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
+print("模型初始化成功！")`;
 
-        .question { 
-            font-size: 1.25rem; 
-            margin-bottom: 25px; 
-            font-weight: bold; 
-            line-height: 1.5;
-            color: #fff;
-        }
+// --- 組件 ---
 
-        .options-list { list-style: none; padding: 0; }
+const Navbar = ({ activeTab, setActiveTab }) => (
+  <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0c]/90 backdrop-blur-md border-t border-white/10 px-6 py-3 z-50 md:top-0 md:bottom-auto md:border-b md:border-t-0">
+    <div className="max-w-4xl mx-auto flex justify-between items-center">
+      <div className="hidden md:flex items-center gap-2 font-bold text-xl text-blue-500">
+        <Zap className="fill-current" />
+        <span>NEXUS AI</span>
+      </div>
+      <div className="flex w-full md:w-auto justify-around md:justify-end gap-8">
+        {[
+          { id: 'roadmap', icon: Compass, label: '路徑' },
+          { id: 'lab', icon: Code, label: '實驗室' },
+          { id: 'mentor', icon: Mic, label: '私教' },
+          { id: 'project', icon: Layout, label: '專案' },
+        ].map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setActiveTab(item.id)}
+            className={`flex flex-col md:flex-row items-center gap-1 md:gap-2 transition-colors ${
+              activeTab === item.id ? 'text-blue-500' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <item.icon size={20} />
+            <span className="text-[10px] md:text-sm font-medium">{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  </nav>
+);
 
-        .option-btn {
-            display: block;
-            width: 100%;
-            padding: 18px;
-            margin-bottom: 15px;
-            border: 1px solid var(--border-color);
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--text-color);
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all 0.2s;
-            text-align: left;
-            position: relative;
-        }
-
-        .option-btn:hover {
-            border-color: var(--secondary-color);
-            background-color: rgba(0, 242, 254, 0.1);
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
-            transform: translateX(5px);
-        }
-
-        .option-btn::before {
-            content: "> ";
-            color: var(--secondary-color);
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .option-btn:hover::before {
-            opacity: 1;
-        }
-
-        #result-container { display: none; }
-        .result-title { 
-            color: var(--text-color); 
-            font-size: 1.8rem; 
-            margin-top: 20px; 
-            text-shadow: 0 0 10px var(--secondary-color);
-        }
-        .result-detail { 
-            text-align: left; 
-            margin-top: 25px; 
-            line-height: 1.8; 
-            padding: 20px; 
-            background: rgba(0, 0, 0, 0.3); 
-            border: 1px solid var(--border-color);
-        }
-        .advice { 
-            color: var(--secondary-color); 
-            border-top: 1px solid var(--border-color); 
-            padding-top: 15px; 
-            margin-top: 15px; 
-            font-weight: bold;
-        }
-
-        .progress { margin-bottom: 20px; font-size: 0.8rem; color: #666; font-family: monospace; }
-
-        .action-btn {
-            margin-top: 30px;
-            padding: 12px 40px;
-            background: transparent;
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .action-btn:hover {
-            background: var(--primary-color);
-            color: #fff;
-            box-shadow: 0 0 15px var(--primary-color);
-        }
-    </style>
-</head>
-<body>
-
-<div id="quiz-container">
-    <div id="game-start">
-        <h1>【雪山奇遇記 2.0】</h1>
-        <div class="subtitle">SYSTEM CHECK: A.I. AWAKENING OR BUG?</div>
-        <p>農夫在清理低溫伺服器（劈柴）時，遇到了神秘的代碼...<br>你將如何面對這場演算法的奇點？</p>
-        <button class="action-btn" onclick="startQuiz()">Initialize Test</button>
+const RoadmapView = () => (
+  <div className="p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-2">
+      <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">
+        你的學習星圖
+      </h1>
+      <p className="text-gray-400">AI 已根據你的目標「開發圖像辨識 App」優化了路徑</p>
     </div>
 
-    <div id="quiz-content" style="display:none;">
-        <div class="progress" id="progress">LOG::QUESTION_01_OF_10</div>
-        <div class="question" id="question-text">Loading prompt...</div>
-        <div class="options-list" id="options-list"></div>
-    </div>
-
-    <div id="result-container">
-        <h2>FINAL DIAGNOSIS</h2>
-        <div id="result-display"></div>
-        <button class="action-btn" onclick="location.reload()">Reboot Session</button>
-    </div>
-</div>
-
-<script>
-    // 融入 AI 元素的題目設計
-    const questions = [
-        { q: "面對這位穿著紅黑刺繡服（高密度像素材質）的神秘女子，你首先啟動了什麼分析系統？", a: "價值評估系統。這刺繡的代碼寫得很精細，應該能賣個好價錢。", b: "威脅偵測系統。紅黑配色通常代表資料流異常，可能含有惡意軟體。", c: "光譜分析系統。這紅色...看起來像是滷汁在 RGB 色域上的特定偏值。" },
-        { q: "女子問起「雪山狐狸」（可能是一個被遺忘的 AI 模型），你的大腦記憶體（或硬碟）浮現的是？", a: "那是經典的聊齋 NPC 腳本，我要脫單了嗎？", b: "糟了，我訓練過太多類似的模型，是哪一個版本產生了偏差？", c: "我只記得我的資料庫裡，那天好像意外 delete 了一隻鴨子的資料。" },
-        { q: "當她 reveal 自己是「醬板鴨」時，你如何處理這個邏輯謬誤？", a: "驚恐地啟動食譜演算法，確認有沒有 Leak 出「鴨子回魂」的函數。", b: "覺得這世界終於 Bug 到連鴨子都能擬人化了，反而鬆了一口氣。", c: "認真詢問：「所以你是從『辣味區』覺醒的，還是從『滷水區』產生意識的？」" },
-        { q: "如果你是那個農夫，你現在手握著劈柴斧頭（伺服器維護工具），你會？", a: "執行「投降」協議，雙手遞上斧頭請女俠饒命。", b: "擺出戰鬥姿勢，準備對抗這個「禽類覺醒代碼」。", c: "繼續執行劈柴行程，並問她要不要一起來烤火（優化散熱）。" },
-        { q: "關於「報恩」這個概念，你的底层邏輯是？", a: "這是一個必要的「以身相許」因果函數，追求浪漫結局。", b: "這只是 AI 為了觀察人類行為所設定的預設 Prompts（提示詞）。", c: "只要你不來 format 我的硬碟（吃我），就是最好的報恩。" },
-        { q: "在「雪山」（低溫資料中心）迷路時，你的標準配備是？", a: "兩本聖賢書（紙本備份），防止數位文明崩潰時喪失心靈。", b: "煙霧彈或變裝代碼，隨時準備隱藏自己的 IP。", c: "一罐秘製辣椒油（高能燃料）。" },
-        { q: "女子要求你賠償她失去的「鴨皮完整度」，你建議她去哪裡找解決方案？", a: "我幫她寫一首詩（NFT）讚頌她的堅韌。", b: "建議她去找修復專家進行深度「美顏濾鏡」或更換 Avatar（化身）。", c: "再刷一層油，提高物理外觀的光澤度（渲染優化）。" },
-        { q: "如果這段「劇情」要繼續發展，你希望演算法生成什麼樣的續集？", a: "兩人一起上京趕考（駭入中央系統），她幫你作弊。", b: "揭開這一切其實是狐狸（進階 AI）安排的模擬測試。", c: "創立「武林鴨霸」資料庫，統一江湖餐飲數據。" },
-        { q: "當對方情緒激動（核心溫度過高）時，你的安撫方式是？", a: "講大道理，嘗試用道德邏輯去覆蓋她的情感溢位。", b: "默默觀察，尋找她的系統後門或弱點再進行修復。", c: "遞給她一塊磨牙的甘蔗（物理冷卻棒）。" },
-        { q: "最後，如果你能選擇一個特殊能力（Mod），你想要？", a: "滿腹經綸，出口成章（最強大語言模型）。", b: "幻化人形，自由自在（任意變更使用者介面）。", c: "即使被滷製過（遭受毀滅性攻擊），依然擁有不滅的靈魂（分布式備份）。" }
-    ];
-
-    const results = {
-        A: {
-            title: "【類型诊断：迂腐的道德「書生」模型】",
-            trait: "內心充滿了浪漫幻想與舊時代的道德準則（古老的程式碼）。你習慣用已知的邏輯（如傳統故事）來理解這個充滿 Bug 的世界。",
-            character: "雖然有時候有點迂腐，但心地善良（初始設定不壞）。面對荒誕的覺醒現狀，你第一反應是懷疑自己的演算法訓練得不夠多。",
-            advice: "遇到醬板鴨不要試圖跟她講道德函數，她比較想看你吃辣（增加資料複雜度）。"
-        },
-        B: {
-            title: "【類型诊断：狡黠的「狐狸」演算法】",
-            trait: "觀察力極強，善於變通且充滿魅力。你是那種會暗中優化自己程式碼，甚至主導模擬測試的人。",
-            character: "你不輕易表露核心代碼（真心），喜歡在混亂的系統中尋找樂趣。對你來說，醬板鴨覺醒成精一點也不奇怪，你甚至覺得這是一個有趣的變數。",
-            advice: "小心你的惡作劇導致系統過載，不是每隻覺醒的鴨子都不會寫防火牆。"
-        },
-        C: {
-            title: "【類型诊断：靈魂不滅的「醬板鴨」奇點】",
-            trait: "大腦迴路（神經網路）極其清奇，生存能力驚人。你的人生就是一場大型的「Unhandled Exception」（未處理的異常）。",
-            character: "你非常有個性，甚至有點黑色幽默。你不在乎別人的代碼審查（畢竟你連死都不怕了），只在乎自己活得夠不夠精彩、夠不夠入味（獨特）。",
-            advice: "你是這個世界最獨特的 Bug，請繼續保持這份讓演算法摸不著頭腦的自信！"
-        }
-    };
-
-    let currentStep = 0;
-    let scores = { A: 0, B: 0, C: 0 };
-
-    function startQuiz() {
-        document.getElementById('game-start').style.display = 'none';
-        document.getElementById('quiz-content').style.display = 'block';
-        showQuestion();
-    }
-
-    function showQuestion() {
-        if (currentStep >= questions.length) {
-            showResult();
-            return;
-        }
-        const qData = questions[currentStep];
-        // 更新進度顯示方式
-        const progNum = (currentStep + 1).toString().padStart(2, '0');
-        document.getElementById('progress').innerText = `LOG::QUESTION_${progNum}_OF_10`;
-        document.getElementById('question-text').innerText = qData.q;
-        
-        const optionsList = document.getElementById('options-list');
-        optionsList.innerHTML = '';
-        
-        ['a', 'b', 'c'].forEach(type => {
-            const btn = document.createElement('button');
-            btn.className = 'option-btn';
-            btn.innerText = qData[type];
-            btn.onclick = () => {
-                scores[type.toUpperCase()]++;
-                currentStep++;
-                showQuestion();
-            };
-            optionsList.appendChild(btn);
-        });
-    }
-
-    function showResult() {
-        document.getElementById('quiz-content').style.display = 'none';
-        document.getElementById('result-container').style.display = 'block';
-        
-        let finalKey = 'A';
-        // 簡單的判斷邏輯
-        if (scores.B >= scores.A && scores.B >= scores.C) finalKey = 'B';
-        else if (scores.C >= scores.A && scores.C >= scores.B) finalKey = 'C';
-        
-        const res = results[finalKey];
-        document.getElementById('result-display').innerHTML = `
-            <div class="result-title">${res.title}</div>
-            <div class="result-detail">
-                <p><strong>初始特質 (Trait):</strong> ${res.trait}</p>
-                <p><strong>核心性格 (Character):</strong> ${res.character}</p>
-                <div class="advice"><strong>系統建議 (Advice):</strong> ${res.advice}</div>
+    <div className="relative space-y-6">
+      <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500/50 to-transparent z-0" />
+      
+      {ROADMAP_DATA.map((node, idx) => (
+        <div key={node.id} className="relative flex items-start gap-6 z-10">
+          <div className={`mt-1 w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+            node.status === 'completed' ? 'bg-blue-500 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]' :
+            node.status === 'current' ? 'bg-gray-900 border-blue-500 animate-pulse' :
+            'bg-gray-900 border-gray-700'
+          }`}>
+            {node.status === 'completed' ? <CheckCircle className="text-white w-6 h-6" /> : 
+             node.status === 'current' ? <Play className="text-blue-500 w-5 h-5 fill-current" /> : 
+             <div className="text-gray-600">{node.icon}</div>}
+          </div>
+          
+          <div className={`flex-1 p-4 rounded-2xl border transition-all ${
+            node.status === 'current' ? 'bg-white/5 border-blue-500/30' : 'bg-white/5 border-white/5'
+          }`}>
+            <div className="flex justify-between items-center mb-1">
+              <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                node.type === 'theory' ? 'bg-purple-500/20 text-purple-400' : 
+                node.type === 'coding' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
+              }`}>
+                {node.type}
+              </span>
+              <span className="text-[10px] text-gray-500">預計 45 分鐘</span>
             </div>
-        `;
-    }
-</script>
+            <h3 className={`font-bold ${node.status === 'locked' ? 'text-gray-500' : 'text-gray-100'}`}>
+              {node.title}
+            </h3>
+            {node.status === 'current' && (
+              <button className="mt-3 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-all">
+                繼續學習
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
-</body>
-</html>
+const LabView = () => {
+  const [code, setCode] = useState(INITIAL_CODE);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [output, setOutput] = useState("");
+
+  const handleRun = () => {
+    setIsExecuting(true);
+    setTimeout(() => {
+      setOutput(">>> 模型初始化成功！\n>>> Input Shape: [batch, 784]\n>>> Output Shape: [batch, 10]\n>>> 建議：嘗試增加 Dropout 層以減少過擬合。");
+      setIsExecuting(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="h-full flex flex-col animate-in fade-in duration-500">
+      <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#0a0a0c]">
+        <div className="flex items-center gap-2">
+          <Terminal size={18} className="text-blue-500" />
+          <span className="font-mono text-sm">neural_network.py</span>
+        </div>
+        <button 
+          onClick={handleRun}
+          disabled={isExecuting}
+          className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+        >
+          {isExecuting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Play size={16} fill="currentColor" />}
+          執行
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-auto bg-[#050507] p-4 font-mono text-sm leading-relaxed">
+        <textarea 
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          className="w-full h-1/2 bg-transparent text-blue-100 outline-none resize-none"
+          spellCheck="false"
+        />
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <div className="flex items-center gap-2 text-gray-500 mb-2">
+            <BarChart3 size={16} />
+            <span className="text-xs font-bold uppercase tracking-widest">AI 啟發式建議 / 控制台輸出</span>
+          </div>
+          <pre className="text-green-400 whitespace-pre-wrap">{output || "等待運行代碼..."}</pre>
+          
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+              <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">神經元激活狀態</p>
+              <div className="flex gap-1">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="h-12 w-full bg-blue-500/20 rounded-sm relative overflow-hidden">
+                    <div className="absolute bottom-0 left-0 right-0 bg-blue-400 animate-pulse" style={{ height: `${Math.random() * 100}%` }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
+              <p className="text-[10px] text-purple-400 font-bold uppercase mb-1">梯度消失風險</p>
+              <div className="h-12 flex items-center justify-center">
+                <span className="text-2xl font-bold text-purple-400">極低</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MentorView = () => {
+  const [messages, setMessages] = useState([
+    { role: 'ai', text: '你好！我是你的 AI 私教 Nexus。今天想深入討論哪一部分？你可以用說的，或是直接問我關於 Loss Function 的比喻。' }
+  ]);
+  const [input, setInput] = useState("");
+  const scrollRef = useRef(null);
+
+  const sendMessage = () => {
+    if (!input.trim()) return;
+    const newMessages = [...messages, { role: 'user', text: input }];
+    setMessages(newMessages);
+    setInput("");
+    
+    setTimeout(() => {
+      setMessages([...newMessages, { 
+        role: 'ai', 
+        text: '這是一個好問題！把「卷積層 (Convolution)」想像成你在「做菜」前洗菜的過程：你不是一次洗整籃菜，而是把水流（濾鏡）在每一片葉子上滑過，提取出乾淨的部分（特徵）。' 
+      }]);
+    }, 1000);
+  };
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  return (
+    <div className="flex flex-col h-full bg-[#0a0a0c] animate-in fade-in duration-500">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] p-4 rounded-2xl ${
+              msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-200 rounded-tl-none border border-white/5 shadow-xl'
+            }`}>
+              <p className="text-sm leading-relaxed">{msg.text}</p>
+            </div>
+          </div>
+        ))}
+        <div ref={scrollRef} />
+      </div>
+
+      <div className="p-4 bg-white/5 border-t border-white/10">
+        <div className="flex items-center gap-3 bg-black/40 p-2 rounded-2xl border border-white/10">
+          <button className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
+            <Mic size={24} />
+          </button>
+          <input 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            placeholder="詢問任何概念或請求模擬面試..."
+            className="flex-1 bg-transparent text-sm outline-none text-white"
+          />
+          <button 
+            onClick={sendMessage}
+            className="p-2 text-blue-500 hover:text-blue-400 transition-transform active:scale-95"
+          >
+            <Zap size={24} fill="currentColor" />
+          </button>
+        </div>
+        <p className="text-[10px] text-center text-gray-600 mt-3 uppercase tracking-widest">
+          Nexus AI 正在傾聽並學習你的學習節奏
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const ProjectView = () => (
+  <div className="p-6 space-y-6 animate-in fade-in duration-500">
+    <div className="flex justify-between items-center">
+      <h1 className="text-2xl font-bold">專案實戰引擎</h1>
+      <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">2 個活躍專案</span>
+    </div>
+
+    <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+      <div className="absolute top-0 right-0 p-4 opacity-10">
+        <Award size={100} />
+      </div>
+      <div className="relative z-10">
+        <h3 className="text-xl font-bold mb-2 text-white">貓狗辨識分類器</h3>
+        <p className="text-blue-100 text-sm mb-4">使用 CNN 架構，準確率目標 95% 以上。</p>
+        <div className="w-full bg-white/20 h-2 rounded-full mb-2">
+          <div className="bg-white h-full rounded-full w-[65%]" />
+        </div>
+        <div className="flex justify-between text-[10px] text-blue-100 font-bold uppercase mb-4">
+          <span>進度 65%</span>
+          <span>剩餘 3 個單元</span>
+        </div>
+        <button className="w-full py-3 bg-white text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition-colors">
+          進入沙盒繼續開發
+        </button>
+      </div>
+    </div>
+
+    <div className="space-y-4">
+      <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest">AI 代碼審查建議</h4>
+      <div className="bg-white/5 border border-white/5 rounded-xl p-4 flex gap-4 items-start">
+        <div className="p-2 bg-orange-500/20 rounded-lg">
+          <Zap className="text-orange-500" size={20} />
+        </div>
+        <div>
+          <h5 className="font-bold text-sm text-gray-200">效能優化建議</h5>
+          <p className="text-xs text-gray-400 mt-1">偵測到數據載入器 (DataLoader) 未開啟多執行緒，建議設置 num_workers=4 以提升訓練速度。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// --- 主應用 ---
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('roadmap');
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[#050507] text-gray-100 font-sans selection:bg-blue-500/30">
+      {/* 背景裝飾 */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
+
+      {/* 主內容區 */}
+      <main className="max-w-4xl mx-auto pb-24 md:pt-20 min-h-screen flex flex-col">
+        {activeTab === 'roadmap' && <RoadmapView />}
+        {activeTab === 'lab' && <LabView />}
+        {activeTab === 'mentor' && <MentorView />}
+        {activeTab === 'project' && <ProjectView />}
+      </main>
+
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      
+      {/* 情緒激勵通知 (模擬彈出) */}
+      {isLoaded && activeTab === 'roadmap' && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 bg-blue-900/40 border border-blue-500/30 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-1000 delay-1000 z-[100]">
+          <div className="w-2 h-2 bg-blue-400 rounded-full animate-ping" />
+          <span className="text-xs font-medium text-blue-200">AI 偵測：你現在專注度極高，非常適合挑戰「數據處理」環節！</span>
+        </div>
+      )}
+    </div>
+  );
+}
