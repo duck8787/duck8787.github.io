@@ -178,7 +178,7 @@ const LabView = () => {
               <div className="flex gap-1">
                 {[...Array(8)].map((_, i) => (
                   <div key={i} className="h-12 w-full bg-blue-500/20 rounded-sm relative overflow-hidden">
-                    <div className="absolute bottom-0 left-0 right-0 bg-blue-400 animate-pulse" style={{ height: `${Math.random() * 100}%` }} />
+                    <div className="absolute bottom-0 left-0 right-0 bg-blue-400 animate-pulse" style={{ height: `${Math.random() * 100}%` }} />}
                   </div>
                 ))}
               </div>
