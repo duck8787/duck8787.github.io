@@ -169,7 +169,7 @@ const LabView = () => {
   const [neuronActivity, setNeuronActivity] = useState([]);
 
   useEffect(() => {
-    setNeuronActivity([...Array(12)].map(() => Math.random() * 100));
+    setNeuronActivity([...Array(12)].map(() => Math.floor(Math.random() * 100)));
   }, []);
 
   const runCode = () => {
@@ -179,7 +179,7 @@ const LabView = () => {
     setTimeout(() => {
       setOutput(prev => prev + "\n>>> Loss: 0.8421 -> 0.4312\n>>> Epoch 1: 100% Complete\n>>> 模型優化建議：考慮在 Layer 1 後加入 BatchNormalization 以穩定數值波動。");
       setIsRunning(false);
-      setNeuronActivity([...Array(12)].map(() => Math.random() * 100));
+      setNeuronActivity([...Array(12)].map(() => Math.floor(Math.random() * 100)));
     }, 2000);
   };
 
@@ -233,7 +233,7 @@ const LabView = () => {
                 <div key={i} className="relative w-full h-full bg-white/5 rounded-sm overflow-hidden">
                   <div 
                     className="absolute bottom-0 left-0 right-0 bg-blue-400/40 transition-all duration-500" 
-                    style={{ height: `${val}%` }} 
+                    style={{ height: val + '%' }} 
                   />
                 </div>
               ))}
