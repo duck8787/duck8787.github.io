@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+ { useState, useEffect, useRef } from 'react';
 import { 
   Compass, 
   Code, 
@@ -132,12 +132,22 @@ const LabView = () => {
   const [code, setCode] = useState(INITIAL_CODE);
   const [isExecuting, setIsExecuting] = useState(false);
   const [output, setOutput] = useState("");
+  // 用於儲存隨機生成的高度，避免 Liquid 語法錯誤
+  const [neuronHeights, setNeuronHeights] = useState([]);
+
+  useEffect(() => {
+    // 初始化隨機高度
+    const heights = [...Array(8)].map(() => `${Math.floor(Math.random() * 80) + 20}%`);
+    setNeuronHeights(heights);
+  }, []);
 
   const handleRun = () => {
     setIsExecuting(true);
     setTimeout(() => {
       setOutput(">>> 模型初始化成功！\n>>> Input Shape: [batch, 784]\n>>> Output Shape: [batch, 10]\n>>> 建議：嘗試增加 Dropout 層以減少過擬合。");
       setIsExecuting(false);
+      // 模擬運行後的高度變化
+      setNeuronHeights([...Array(8)].map(() => `${Math.floor(Math.random() * 80) + 20}%`));
     }, 1500);
   };
 
@@ -176,9 +186,12 @@ const LabView = () => {
             <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
               <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">神經元激活狀態</p>
               <div className="flex gap-1">
-                {[...Array(8)].map((_, i) => (
+                {neuronHeights.map((h, i) => (
                   <div key={i} className="h-12 w-full bg-blue-500/20 rounded-sm relative overflow-hidden">
-                    <div className="absolute bottom-0 left-0 right-0 bg-blue-400 animate-pulse" style={{ height: `${Math.random() * 100}'  }} />
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 bg-blue-400 animate-pulse transition-all duration-500" 
+                      style={{ height: h }} 
+                    />
                   </div>
                 ))}
               </div>
